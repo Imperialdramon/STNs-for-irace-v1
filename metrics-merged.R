@@ -17,6 +17,7 @@ if (length(args) < 1) { #  Test if there are two arguments if not, return an err
         A 2nd argument can be given, a size factor to scale nodes and edges", call.=FALSE)
 }
 infile <- args[1]
+outname <- args[3]
 
 if (!file.exists(infile) ){
   stop("Input file does not exist", call.=FALSE)
@@ -64,7 +65,7 @@ metrics[i,"edges"] <- ecount(stnm)
 
 # Take the IDS of the nodes for metric computation
 end_nodes <- which(grepl("end", V(stnm)$Type, fixed = TRUE))
-best_nodes <- which(grepl("best", V(stnm)$Type, fixed = TRUE))
+best_nodes <- which(grepl("best", V(stnm)$Quality, fixed = TRUE))
 
 metrics[i,"nshared"] <- length(which(V(stnm)$Shared == TRUE))
 metrics[i,"nbest"] <- length(best_nodes)
@@ -73,8 +74,19 @@ metrics[i,"components"] <- components(stnm)$no
 # Strength metric
 best_str <-  sum(strength(stnm, vids = best_nodes,  mode="in"))  #  incoming strength of best
 metrics[i,"strength"] <- round(best_str/(num_alg*nruns),4)   # normalised by total number of runs
+#Elite nodes
+EL2 <- which(V(stnm)$Elite_1 == "T")
+EL1 <- which(V(stnm)$Elite_2 == "T")
+EliteTotal <- union(EL1,EL2)
+metrics[i,"elite_nodes"] <- length(EliteTotal)
+
+#Shared Elite Nodes
+Top <- induced.subgraph(stnm, V(stnm)$Quality == 'eliteregular' | V(stnm)$Quality == 'regularelite' | V(stnm)$Quality == 'eliteelite' | V(stnm)$Quality == 'elite' | V(stnm)$Quality == 'best')
+T2 <- simplify(Top)
+shareids <- which( V(T2)$Quality == 'eliteregular' | V(T2)$Quality == 'regularelite' | V(T2)$Quality == 'eliteelite')
+metrics[i,"sh_elite"] <- length(shareids)
 
 # Save metrics as .csv file
 ofname <- paste0(iname,"-metrics.csv")   # file name and -metrics
 cat ("Output file: ", ofname, "\n" )
-write.csv(metrics, file = ofname)
+write.csv(metrics, file = outname)

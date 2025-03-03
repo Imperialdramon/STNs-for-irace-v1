@@ -46,10 +46,11 @@ if (!require("igraph", character.only = TRUE)) {
 # Functions for visualisation, and Default Colours -------------------------------- 
 
 # Node Colors
-best_ncol  <-  "red"    # Best solution found
-std_ncol <-  "gray70" # Local Optima Gray 
-end_ncol <-  "gray30"  # End of trajectories for each run.
-start_ncol <-  "gold"   # Start of trajectories
+# STNs model for irace has 3 types of quality nodes: best, regular, elite
+best_ncol  <- "red"
+regular_ncol <- "gray70"
+elite_ncol <- "orange"
+shapes_ncol <- "black"
 
 # Edge Colors
 # STNs  model has 3 types of perturbation edges: 3 Types: (i)improvement, (e)equal, (w)worsening
@@ -79,12 +80,14 @@ mytriangle <- function(coords, v=NULL, params) {
 add_shape("triangle", clip=shapes("circle")$clip,
           plot=mytriangle)
 
-
-# Legend
-legend.txt <- c("Start", "End", "Medium", "Best", "Improve", "Equal", "Worse")
-legend.col <- c(start_ncol, end_ncol, std_ncol, best_ncol,impru_ecol,equal_ecol,worse_ecol)
-legend.shape <- c(15,17,21,21,NA,NA,NA)  # Circles for nodes and NA (no shape) for edges
-legend.lty <-  c(NA,NA,NA,NA,1,1,1)   # Line style, NA for nodes, solid line for edges
+# Legends for the plot
+legend.txt <- c("Start", "End", "Standar", "Regular", "Elite", "Best", "Improve", "Equal", "Worse")
+# Colors for legend
+legend.col <- c(shapes_ncol, shapes_ncol, shapes_ncol, regular_ncol, elite_ncol, best_ncol, impru_ecol, equal_ecol, worse_ecol)
+# Shapes for legend -> 15 = square, 17 = triangle, 21 = circle
+legend.shape <- c(15,17,21,21,21,21,NA,NA,NA)
+# Line style, NA for nodes, solid line for edges
+legend.lty <-  c(NA,NA,NA,NA,NA,NA,1,1,1)
 
 # Plot Networks 
 # N: Graph objec
@@ -145,24 +148,24 @@ stn_decorate <- function(N, bmin)  {
   # width of edges proportional to weight - times visited
   E(N)$width <- E(N)$weight
   
-  # Color of Nodes
-  V(N)$color <- std_ncol  # default color of nodes
-  V(N)[V(N)$Type == "start"]$color = start_ncol  # Color of start nodes
-  V(N)[V(N)$Type == "end"]$color = end_ncol  # Color of end of runs nodes
-  V(N)[V(N)$Type == "best"]$color = best_ncol   # Color of  best nodes
-  
   # Shape of nodes
-  V(N)$shape <- "circle"  # circle is the default shape
+  V(N)[V(N)$Type == "standard"]$shape = "circle"  # circle is the default shape
   V(N)[V(N)$Type == "start"]$shape = "square"  # Square for start nodes
   V(N)[V(N)$Type == "end"]$shape = "triangle"  # Triangle for start nodes
+
+  # Color of Nodes
+  V(N)[V(N)$Quality == "regular"]$color = regular_ncol  # Color of regular nodes
+  V(N)[V(N)$Quality == "elite"]$color = elite_ncol  # Color of elite nodes
+  V(N)[V(N)$Quality == "best"]$color = best_ncol   # Color of best nodes
   
   # Frame colors are the same as node colors. White  frame for best nodes to highlight them
-  V(N)$frame.color <- V(N)$color
-  V(N)[V(N)$Type == "best"]$frame.color <- "white"
+  #V(N)$frame.color <- V(N)$color
+  #V(N)[V(N)$Type == "best"]$frame.color <- "white"
+  #V(N)[V(N)$Elite == "T"]$frame.color <- "orange"
   
   # Size of Nodes Proportional to  incoming degree, 
-  V(N)$size <- strength(N, mode="in") + 1   # nodes with strength 0 have at least size 1 
-  V(N)[V(N)$Type == "best"]$size = V(N)[V(N)$Type == "best"]$size + 0.5 # Increase a bit size of best node
+  V(N)$size <- strength(N, mode="in") + 1   # nodes with strength 0 have at least size 1
+  V(N)[V(N)$Quality == "best"]$size = V(N)[V(N)$Quality == "best"]$size + 0.5 # Increase a bit size of best node
   
   return(N)
 }

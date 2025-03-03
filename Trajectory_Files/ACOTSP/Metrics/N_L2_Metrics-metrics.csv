@@ -1,0 +1,2 @@
+"","instance","nodes","edges","nbest","nend","components","strength","plength","npaths","numelites","porc-elites","avg_outedges_elites","avg_incedges_elites","edges-consec-elites","porc_edges-consec-elites"
+"1","ACOTSP_N_L2_STN_stn",6078,6038,1,10,40,0.1,4,1,260,4.27772293517604,23.2230769230769,0.846153846153846,220,3.64359059291156

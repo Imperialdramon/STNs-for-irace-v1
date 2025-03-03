@@ -38,15 +38,15 @@ if (is.na(size_factor)) {
 best_ncol  <-  "red"    # Best solution found
 end_run_ncol  <- "gray30"  # End of trajectories for each run.
 start_ncol <-  "gold"   # Startof trajectories
-shared_col <-  "gray70" #  Visitied by more than one algorithms
+shared_col <-  "black" #  Visitied by more than one algorithms
 
 # Algorithm colors - used for single algorithms - Algorithms will be coloured
 # in alphabetical order of their name: orange, blue, green
-alg_col    <-  c("#fc8d62", "#377eb8", "#4daf4a")  #  orange, blue  green
+alg_col    <-  c("#fc8d62", "#377eb8")#, "#4daf4a")  #  orange, blue  green
 
 # Plot legend
 
-legend.col <- c("gold", "gray30", "red", alg_col, shared_col)
+legend.col <- c("black", "gray30", "red", alg_col, "green")
 
 legend.shape <- c(15,17,16,16,16,16,16)  # square and circles
 
@@ -96,7 +96,7 @@ plotNet <-function(N, tit, nsizef, ewidthf, asize, ecurv, mylay, bleg = T)
   }  
 }
 
-# Decorate mrged STN - combining 3 algorithms
+# Decorate mrged STN - combining 2 algorithms
 
 # sfac: multiplicative factor for size of nodes
 stn_decorate <- function(N)  {
@@ -107,19 +107,25 @@ stn_decorate <- function(N)  {
     V(N)[V(N)$Alg == algn[i]]$color <- alg_col[i]
   }
   
+  
   # Take the IDS of the type of nodes for decoration
   start_nodes <- grepl("start", V(N)$Type, fixed = TRUE)
   end_nodes <- grepl("end", V(N)$Type, fixed = TRUE)
-  best_nodes <- grepl("best", V(N)$Type, fixed = TRUE)
-  
+  best_nodes <- grepl("best", V(N)$Quality, fixed = TRUE)
+  shared_nodes <- grepl("eliteelite" , V(N)$Quality, fixed = TRUE)
+  shn  <- grepl("eliteregular" , V(N)$Quality, fixed = TRUE)  
+  shn2 <- grepl( "regularelite" , V(N)$Quality, fixed = TRUE)  
   V(N)[start_nodes]$color = start_ncol  # Color of start nodes
   V(N)[end_nodes]$color = end_run_ncol  # Color of end of runs nodes
   V(N)[best_nodes]$color = best_ncol   # Color of  best nodes
+  V(N)[shared_nodes]$color = "green"
+  V(N)[shn]$color = "green"
+  V(N)[shn2]$color = "green"
   
   # Frame colors are the same as node colors, white around best to highlight it
   V(N)$frame.color <- V(N)$color
-  V(N)[V(N)$color == shared_col]$frame.color <- "gray40"
-  V(N)[grepl("best", V(N)$Type, fixed = TRUE)]$frame.color <- "white"
+  V(N)[V(N)$color == shared_col]$frame.color <- shared_col
+  V(N)[grepl("best", V(N)$Quality, fixed = TRUE)]$frame.color <- "white"
   
   # Shape of nodes
   V(N)$shape <- "circle"  # circle is the default shape
@@ -129,7 +135,7 @@ stn_decorate <- function(N)  {
   # Size of Nodes Proportional to  incoming degree, 
   V(N)$size <- strength(N, mode="in") + 1   # nodes with strength 0 have at least size 0.8 
   V(N)[end_nodes]$size = V(N)[end_nodes]$size + 0.3 # Increase a a bit size of end nodes
-  V(N)[best_nodes]$size = V(N)[best_nodes]$size + 0.6   # Increease a bit more the size of  best nodes
+  V(N)[best_nodes]$size = V(N)[best_nodes]$size + 1   # Increease a bit more the size of  best nodes
   
   # Color of edges 
   E(N)$color <- shared_col  # default color of edges
@@ -155,9 +161,18 @@ subFit <- function(N, fvalue)
 load(infile, verbose = F)
 
 legend.txt <- c("Start", "End", "Best", algn, "Shared")  # needs to read names of algorithms
+
+#reparar
+Top <- induced.subgraph(stnm, V(stnm)$Quality == 'eliteregular' | V(stnm)$Quality == 'regularelite' | V(stnm)$Quality == 'eliteelite' | V(stnm)$Quality == 'elite' | V(stnm)$Quality == 'best')
+stnm <- simplify(Top)
+
 stnm <- stn_decorate(stnm)
-lkk <-layout.kamada.kawai(stnm)
-lfr <-layout.fruchterman.reingold(stnm)
+
+#lkk <-layout.kamada.kawai(stnm)
+lkk <-layout.fruchterman.reingold(stnm)
+lfr <-layout_nicely(stnm)
+#lfr <-layout_with_graphopt(stnm)
+
 # Produce a sub-graph of the merged STN by pruning by fitness  top 25%
 zoom <- subFit(stnm,as.numeric(quantile(V(stnm)$Fitness)[2]))  # prune by fitness top 25%, quantile [2]
 zoom <- delete.vertices(zoom,degree(zoom)==0)    # Remove isolated nodes
@@ -172,20 +187,37 @@ ofname = paste0(ofname,'-plot.pdf')
 pdf(ofname) 
 print(ofname)
 
-nf <- size_factor
-ef <- size_factor * 0.7  # Edges width factor is 70% of nodes factor
-plotNet(stnm, tit="FR layout", nsizef=nf, ewidthf=ef, asize=0.16, ecurv=0.3, mylay=lfr)
-# Slightly smaller nodes and edges for the KK layout as it spreads the components and makes the nodes
-# closer to each other
-plotNet(stnm, tit="KK Layout", nsizef=nf*0.8, ewidthf=ef*0.8, asize=0.12, ecurv=0.3, mylay=lkk)
-
-# Plots of zoomed  -- Increased summed size and edges as the zoomed network has less nodes 
-nf <- size_factor*1.5  
-ef <- size_factor
-
-plotNet(N = zoom, tit="Zoomed (top 25%) FR", nsizef=nf, ewidthf=ef, asize=0.35, ecurv=0.3, mylay=lzfr, bleg = T)
-plotNet(N = zoom, tit="Zoomed (top 25%) KK", nsizef=nf*0.8, ewidthf=ef*0.8, asize=0.2, ecurv=0.3, mylay=lzkk, bleg = T)
-
+acotsp = F
+if(acotsp){
+	nf <- sqrt(size_factor)
+	ef <- sqrt(size_factor) #* 0.5  # Edges width factor is 70% of nodes factor
+	plotNet(stnm, tit="FR layout", nsizef=nf*1, ewidthf=ef*0.1, asize=0.08, ecurv=0.3, mylay=lfr)
+	# Slightly smaller nodes and edges for the KK layout as it spreads the components and makes the nodes
+	# closer to each other
+	plotNet(stnm, tit="KK Layout", nsizef=nf*1, ewidthf=ef*0.1, asize=0.1, ecurv=0.3, mylay=lkk)
+	
+	# Plots of zoomed  -- Increased summed size and edges as the zoomed network has less nodes 
+	nf <- nf
+	ef <- ef
+	
+	plotNet(N = zoom, tit="Zoomed (top 25%) FR", nsizef=nf*1, ewidthf=ef*0.1, asize=0.1, ecurv=0.3, mylay=lzfr, bleg = T)
+	plotNet(N = zoom, tit="Zoomed (top 25%) KK", nsizef=nf*1, ewidthf=ef*0.1, asize=0.1, ecurv=0.3, mylay=lzkk, bleg = T)
+}  else {
+	nf <- sqrt(sqrt(size_factor)*0.3)  #* ''
+	print(nf)
+	ef <- sqrt(size_factor) * 0.5  # Edges width factor is 70% of nodes factor
+	plotNet(stnm, tit="FR layout", nsizef=0.4, ewidthf=ef*0.1, asize=0.08, ecurv=0.15, mylay=lfr)
+	# Slightly smaller nodes and edges for the KK layout as it spreads the components and makes the nodes
+	# closer to each other
+	plotNet(stnm, tit="KK Layout", nsizef=0.5, ewidthf=ef*0.1, asize=0.08, ecurv=0.15, mylay=lkk)
+	
+	# Plots of zoomed  -- Increased summed size and edges as the zoomed network has less nodes 
+	nf <- nf
+	ef <- ef
+	
+	plotNet(N = zoom, tit="Zoomed (top 25%) FR", nsizef=nf*0.3, ewidthf=ef*0.1, asize=0.1, ecurv=0.3, mylay=lzfr, bleg = T)
+	plotNet(N = zoom, tit="Zoomed (top 25%) KK", nsizef=nf*0.3, ewidthf=ef*0.1, asize=0.1, ecurv=0.3, mylay=lzkk, bleg = T)
+	}
 dev.off()
 
 print("Merged STN number of nodes:")

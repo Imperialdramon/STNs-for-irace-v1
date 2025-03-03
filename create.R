@@ -97,42 +97,52 @@ stn_create <- function(instance)  {
   file_ext <- substr(fname, nchar(fname)-3, nchar(fname))
   mysep <- ifelse(file_ext == ".csv", ",","")
   trace_all <- read.table(fname, header=T, sep = mysep,
-                          colClasses=c("integer", "numeric", "character", "numeric", "character"),
+                          colClasses=c("integer", "numeric", "character", "character", "integer", "numeric", "character", "character", "integer"),
                           stringsAsFactors = F)
   trace_all <- trace_all[trace_all$Run <= nruns,]
   lnodes <- vector("list", nruns)
   ledges <- vector("list", nruns)
-  
-  # Store the nodes at the end of runs. Need to detect change of Run
-  k = 1
-  end_ids <- vector()
-  start_ids <- vector()
-  n <- nrow(trace_all)-1
-  start_ids[1] <- trace_all$Solution1[1]
-  for (j in (1:n)) {
-    if (trace_all$Run[j] != trace_all$Run[j+1]) { # when the run counter changes
-      end_ids[k] <- trace_all$Solution2[j]        # keep the name of the end solution
-      start_ids[k+1] <- trace_all$Solution1[j+1]  # keep the name of the next start solution
-      k = k+1
+
+  # Number of rows in the data
+  nrows <- nrow(trace_all)-1
+
+  # Store the last iteration for each run. Need to detect change of Run
+  run = 1
+  run_last_iteration <- vector()
+  for (row in (1:nrows)) {
+    if (trace_all$Run[row] != trace_all$Run[row+1]) { # when the run counter changes
+      run_last_iteration[run] <- trace_all$Iteration2[row]
+      run = run+1
     }
   }
-  end_ids[k] <- trace_all$Solution2[j+1]   # last end ID -s considered as the end of the trajectory
-  
-  end_ids <- unique(end_ids)     # only unique nodes required
-  start_ids <- unique(start_ids)
+  run_last_iteration[run] <- trace_all$Iteration2[row+1] # last iteration of the last run
+
+  # Store the nodes on the last iteration for each run. Need to detect change of Run
+  run = 1
+  end_ids <- c()  # Vector inicial vacío
+  for (row in 1:nrows) {
+    if (trace_all$Iteration2[row] == run_last_iteration[run]) { # when the iteration is the last of the run
+      end_ids <- c(end_ids, trace_all$Solution2[row])  # Agregar el valor al final del vector
+    }
+    if (trace_all$Run[row] != trace_all$Run[row+1]) { # when the run counter changes
+      run = run + 1
+    }
+  }
+  end_ids <- c(end_ids, trace_all$Solution2[row+1]) # last node of the last iteration of the last run
+  end_ids <- unique(end_ids) # only unique nodes required
   
   for (i in (1:nruns)) {  # combine all runs in a single network
     trace <- trace_all[which(trace_all$Run==i),c(-1)] # take by run and remove first column run number
-    colnames(trace) <- c("fit1", "node1", "fit2", "node2")  # set simpler names to column
-    lnodes[[i]] <- rbind(setNames(trace[,c("node1","fit1")], c("Node", "Fitness")),
-                         setNames(trace[,c("node2","fit2")], c("Node", "Fitness")))
+    colnames(trace) <- c("fit1", "node1", "elite1", "iteration1", "fit2", "node2", "elite2", "iteration2")  # set simpler names to column
+    lnodes[[i]] <- rbind(setNames(trace[,c("node1", "fit1", "elite1", "iteration1")], c("Node", "Fitness", "Elite", "Iteration")),
+                          setNames(trace[,c("node2", "fit2", "elite2", "iteration2")], c("Node", "Fitness", "Elite", "Iteration")))
     ledges[[i]] <- trace[,c("node1", "node2")]
   }
   
   # combine the list of nodes into one dataframe and
   # group by (Node,Fitness) to identify unique nodes and count them
-  nodes <- ddply((do.call("rbind", lnodes)), .(Node,Fitness), nrow)
-  colnames(nodes) <- c("Node", "Fitness", "Count")
+  nodes <- ddply((do.call("rbind", lnodes)), .(Node,Fitness,Elite,Iteration), nrow)
+  colnames(nodes) <- c("Node", "Fitness", "Elite", "Iteration", "Count")
   nodesu<- nodes[!duplicated(nodes$Node), ]  # eliminate duplicates from dataframe, in case node ID us duplicated
   # combine the list of edges into one dataframe and
   # group by (node1,node2) to identify unique edges and count them
@@ -147,12 +157,23 @@ stn_create <- function(instance)  {
   } else {    # maximisation  
     best_ids <- which(V(STN)$Fitness >= best)
   }
-  # Four types of nodes, useful for visualisation: Start, End, Best and Standard.
-  V(STN)$Type <- "medium"  # Default type
-  V(STN)[end_ids]$Type <- "end"
+
+  # Obtain the start nodes ids
+  start_ids <- which(V(STN)$Iteration == 1)
+
+  # Obtain the elite nodes ids
+  elite_ids <- which(V(STN)$Elite == "T")
+
+  # Four types of nodes, useful for visualisation: Start, End and Standard.
+  V(STN)$Type <- "standard"
   V(STN)[start_ids]$Type <- "start"
-  V(STN)[best_ids]$Type <- "best"
-  
+  V(STN)[end_ids]$Type <- "end"
+
+  # Three types of quality: Elite, Best and Regular
+  V(STN)$Quality <- "regular"
+  V(STN)[elite_ids]$Quality <- "elite"
+  V(STN)[best_ids]$Quality <- "best"
+
   fname <-  gsub('.{4}$', '', instance) # removes  (last 4 characters, .ext) from file to use as name
   fname <- paste0(outfolder,"/",fname,"_stn.RData")
   save(STN,nruns, bmin, best, file=fname) # Store STN, wether it is a minimisation problem and the best-known given
@@ -168,7 +189,7 @@ get_data <- function(instance) {
   file_ext <- substr(instance, nchar(instance)-3, nchar(instance))
   mysep <- ifelse(file_ext == ".csv", ",", "")
   trd <- read.table(paste0(infolder,"/",instance), header=T, sep = mysep,
-                    colClasses=c("integer", "numeric", "character", "numeric", "character"),
+                    colClasses=c("integer", "numeric", "character", "character", "integer", "numeric", "character", "character", "integer"),
                     stringsAsFactors = F)
   return (trd)
 }

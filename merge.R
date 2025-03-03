@@ -95,10 +95,17 @@ if (num_alg == 2) {
 # Concatenation of the algorithms visiting a node
 V(stnm)$Type_1 <- replace_na(V(stnm)$Type_1,"")
 V(stnm)$Type_2<-replace_na(V(stnm)$Type_2, "")
+
+
+V(stnm)$Quality_1 <- replace_na(V(stnm)$Quality_1,"")
+V(stnm)$Quality_2<-replace_na(V(stnm)$Quality_2, "")
+
 V(stnm)$Alg_1 <- replace_na(V(stnm)$Alg_1,"")
 V(stnm)$Alg_2<-replace_na(V(stnm)$Alg_2, "")
+
 if (num_alg == 2) {
   dft <- data.frame(V(stnm)$Type_1, V(stnm)$Type_2)
+  dfe <- data.frame(V(stnm)$Quality_1, V(stnm)$Quality_2)
   dfa <- data.frame(V(stnm)$Alg_1, V(stnm)$Alg_2)
 } else { 
   V(stnm)$Alg_3<-replace_na(V(stnm)$Alg_3, "")
@@ -109,14 +116,16 @@ if (num_alg == 2) {
 
 dft <- unite(dft,"Type", remove = T, sep = "")
 dfa <- unite(dfa,"Alg", remove = T, sep = "")
-
+dfe <- unite(dfe,"Quality", remove = T, sep = "")
 
 V(stnm)$Type <- as.vector(dft$Type) # Contains a concatenation of types of nodes associated with each node
 V(stnm)$Alg <- as.vector(dfa$Alg)   # Contains a concatenation of Algorithms names that visited each node
+V(stnm)$Quality <- as.vector(dfe$Quality) #Elite, regular or best
+
 
 # Remove vertex attributes that are no longer needed 
 old_vattr = c("Fitness_1", "Fitness_2", "Count_1", "Count_2", 
-              "Type_1", "Type_2", "Alg_1", "Alg_2")
+              "Type_1", "Type_2", "Alg_1", "Alg_2", "Quality_1", "Quality_2")
 if (num_alg == 3) {
   old_vattr = c(old_vattr, "Fitness_3", "Count_3", "Alg_3", "Type_3")
 }

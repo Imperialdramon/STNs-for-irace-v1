@@ -1,0 +1,9 @@
+Output folder:  Test-stn 
+Best value in data: 32416799 
+Number of runs in data: 10 
+[1] "Test/ACOTSP_N_L0_STN.txt"
+[1] "Pre ddply"
+[1] "Pre ddply2"
+[1] "Post ddply2"
+[1] "Number of nodes in the STNs created:"
+[1] 6051

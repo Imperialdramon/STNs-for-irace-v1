@@ -17,6 +17,7 @@ if (length(args) < 1) { #  Test if there are two arguments if not, return an err
 }
 
 infolder <- args[1]
+name <- args[2]
 
 if (!dir.exists(infolder) ){
   stop("Input folder does not exist", call.=FALSE)
@@ -56,7 +57,7 @@ for (inst in instances) {
   metrics[i,"instance"] <- iname
   metrics[i,"nodes"] <- vcount(STN)
   metrics[i,"edges"] <- ecount(STN)
-  best_ids <- which(V(STN)$Type == "best")  # ids of best nodes
+  best_ids <- which(V(STN)$Quality == "best")  # ids of best nodes
   metrics[i,"nbest"] <- length(best_ids)
   start_ids <- which(V(STN)$Type == "start")  # ids of start nodes
   end_ids <- which(V(STN)$Type == "end")  # ids of end  nodes, which are not best
@@ -73,11 +74,24 @@ for (inst in instances) {
     metrics[i,"plength"] <- NA   # average length of shortest path to best
     metrics[i,"npaths"] <-0      # Number of shortest paths to best
   }
+  #elite_ids <- which(V(STN)$Quality == "elite") #The best node are also elite
+  elite_ids <- which(V(STN)$Elite == "T")
+  numelites <- length(elite_ids)
+  #metrics[i,"numelites"] <- numelites
+  metrics[i,"porc-elites"] <- numelites*100/vcount(STN)
+  instr <- strength(STN,vids=elite_ids,mode="in",loops=FALSE)
+  metrics[i,"avg_incedges_elites"] <- sum(instr)/numelites
+  outstr <- strength(STN,vids=elite_ids,mode="out",loops=FALSE)
+  metrics[i,"avg_outedges_elites"] <- sum(outstr)/numelites
+  Top <- induced.subgraph(STN, V(STN)$Elite == 'T')
+  Top2 <- simplify(Top)
+  #metrics[i,"edges-consec-elites"] <- ecount(Top2)
+  metrics[i,"porc_edges-consec-elites"] <- ecount(Top2)*100/ecount(STN)
   i = i+1
 }
 
 # Save metrics as .csv file
 # Create outfolder folder to save STN objects  -- rule append "-plot" to input folder
-ofname <- paste0(infolder,"-metrics.csv")
+ofname <- paste0(name,"-metrics.csv")
 
 write.csv(metrics, file = ofname)
