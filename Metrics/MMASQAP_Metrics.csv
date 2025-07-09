@@ -1,0 +1,4 @@
+Location,nodes,edges,nshared,nbest,nend,components,strength,elite_nodes,sh_elite
+L0,313,1589,207,2,10,1,6.6,63,62
+L1,960,4162,545,2,15,1,2.25,141,129
+L2,3080,6427,936,2,18,1,1,291,187
